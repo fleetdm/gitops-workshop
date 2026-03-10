@@ -1,7 +1,7 @@
-# default.yml controls global settings and policies/queries that run on all hosts ("All teams").
+# default.yml controls global settings and policies/reports that run on all hosts ("All fleets").
 
 policies:
-queries:
+reports:
 agent_options:
 controls:
 org_settings:

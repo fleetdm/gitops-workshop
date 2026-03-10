@@ -15,7 +15,7 @@
 
 # Best practice file structure
 /lib @harrisonravazzolo
-/teams @harrisonravazzolo
+/fleets @harrisonravazzolo
 default.yml @harrisonravazzolo
 
 # GitHub Action and GitLab CI/CD
