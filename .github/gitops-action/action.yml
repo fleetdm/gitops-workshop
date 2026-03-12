@@ -1,13 +1,10 @@
 name: fleetctl-gitops
-description: Builds fleetctl gitops from specified branch to apply configuration to Fleet
+description: Runs fleetctl gitops to apply configuration to Fleet
 
 inputs:
   working-directory:
     description: 'The working directory, which should be the root of the fleet-gitops repository.'
     default: './'
-  fleet-branch:
-    description: 'The branch of fleetdm/fleet to clone and build fleetctl from.'
-    required: true
   dry-run-only:
     description: 'Whether to only run the fleetctl gitops commands in dry-run mode.'
     default: 'false'
@@ -18,21 +15,35 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Clone fleet repository
+    - name: Install fleetctl
       shell: bash
-      run: git clone --branch ${{ inputs.fleet-branch }} --depth 1 https://github.com/fleetdm/fleet.git /tmp/fleet
-
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version-file: /tmp/fleet/go.mod
-
-    - name: Build fleetctl
-      shell: bash
-      working-directory: /tmp/fleet
+      working-directory: ${{ inputs.working-directory }}
       run: |
-        make fleetctl
-        echo "/tmp/fleet/build" >> "$GITHUB_PATH"
+        FLEET_URL="${FLEET_URL%/}"
+        FLEET_VERSION="$(curl "$FLEET_URL/api/v1/fleet/version" --header "Authorization: Bearer $FLEET_API_TOKEN" --fail --silent | jq --raw-output '.version')"
+        DEFAULT_FLEETCTL_VERSION="4.82.0"
+
+        # Decide which fleetctl version to install:
+        # If the server returns a clean version (e.g. 4.74.0), use that.
+        # If the server returns a snapshot (e.g. 0.0.0-SNAPSHOT-xxxxx) or is empty, pin to DEFAULT_FLEETCTL_VERSION.
+        if [[ -z "$FLEET_VERSION" ]]; then
+          INSTALL_VERSION="$DEFAULT_FLEETCTL_VERSION"
+        elif [[ "$FLEET_VERSION" == 0.0.0-SNAPSHOT* ]]; then
+          INSTALL_VERSION="$DEFAULT_FLEETCTL_VERSION"
+        elif [[ "$FLEET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          INSTALL_VERSION="$FLEET_VERSION"
+        else
+          # Strip anything after + (e.g. 4.81.0+foobar -> 4.81.0)
+          FLEET_VERSION="${FLEET_VERSION%%\+*}"
+          if [[ "$FLEET_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            INSTALL_VERSION="$FLEET_VERSION"
+          else
+            INSTALL_VERSION="$DEFAULT_FLEETCTL_VERSION"
+          fi
+        fi
+
+        echo "Installing fleetctl v$INSTALL_VERSION..."
+        npm install -g "fleetctl@$INSTALL_VERSION" || npm install -g fleetctl@latest
 
     - name: Configure fleetctl
       shell: bash
