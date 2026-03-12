@@ -6,7 +6,7 @@ inputs:
     description: 'The working directory, which should be the root of the fleet-gitops repository.'
     default: './'
   dry-run-only:
-    description: 'Whether to only run the fleetctl gitops commands in dry-run mode.'
+    description: 'Whether to only run the fleetctl gitops commands in dry-run mode, or a wet run mode.'
     default: 'false'
   delete-other-fleets:
     description: 'Whether to delete other fleets in Fleet which are not part of the gitops config.'
